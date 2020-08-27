@@ -1,13 +1,14 @@
 package pdfcrawler.adesso.de;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.pdfbox.text.PDFTextStripperByArea;
 import pdfcrawler.adesso.de.csv.CSVErrorStatus;
+import pdfcrawler.adesso.de.exception.ErroneousExtractedDataException;
 import pdfcrawler.adesso.de.exception.ExtractDataException;
 import pdfcrawler.adesso.de.logging.ApplicationLogger;
 import pdfcrawler.adesso.de.logging.LoggingService;
-import pdfcrawler.adesso.de.utilities.Config;
 
 import java.io.File;
 import java.io.IOException;
@@ -23,7 +24,6 @@ import static java.lang.String.format;
 public class PdfScanner {
 
     private final HashMap<String, String> pdfData;
-    private static final String NAME_KEY = "Name";
     private static final String DATE_KEY = "Eingang:";
     private PDFTextStripper tStripper = null;
     private static final String FILE_SUFFIX = ".pdf";
@@ -58,17 +58,22 @@ public class PdfScanner {
                     CSVErrorStatus.selectedDocuments.add(fileAbsolutePath);
 
                     try (PDDocument document = PDDocument.load(new File(fileAbsolutePath))) {
-                        HashMap<String, String> readData = extractFromFile(document, file);
+                        PDPage firstPage = document.getPage(0);
+                        PDDocument firstPageDoc = new PDDocument();
+                        firstPageDoc.addPage(firstPage);
+
+                        HashMap<String, String> readData = extractFromFile(firstPageDoc, file);
+                        checkData(fileAbsolutePath, readData);
+
                         pdfData.putAll(readData);
 
-                        CSVErrorStatus.addReadSuccess(fileAbsolutePath);
-
                         String message = format("\tName[%s]:Datum[%s]\n",
-                                readData.keySet().stream().findFirst().orElse("N/A"),
-                                readData.values().stream().findFirst().orElse("N/A")
+                                readData.keySet().stream().findFirst().orElse(""),
+                                readData.values().stream().findFirst().orElse("")
                         );
                         ApplicationLogger.noFormattingLog(message);
 
+                        CSVErrorStatus.addReadSuccess(fileAbsolutePath);
                     } catch (IOException e) {
                         CSVErrorStatus.notReadDocuments.add(fileAbsolutePath);
                         ApplicationLogger.noFormattingLog(
@@ -76,13 +81,31 @@ public class PdfScanner {
                                         e.getMessage())
                         );
                         LoggingService.addExceptionToLog(e);
-                    } catch (ExtractDataException e) {
+                    } catch (ExtractDataException | ErroneousExtractedDataException e) {
                         CSVErrorStatus.addReadError(fileAbsolutePath);
                         LoggingService.addExceptionToLog(e);
                         ApplicationLogger.noFormattingLog(String.format("\t%s\n", e.getMessage()));
                     }
 
                     return FileVisitResult.CONTINUE;
+                }
+
+                // Check if data are extracted correctly.
+                private void checkData(String fileAbsolutePath, HashMap<String, String> readData) throws ErroneousExtractedDataException {
+                    if (readData.isEmpty()) {
+                        throw new ErroneousExtractedDataException(
+                                String.format("Daten konnten nicht extrahiert werden. Datei:[%s]", fileAbsolutePath)
+                        );
+                    } else if (readData.keySet().stream().findFirst().orElse("").isBlank() ||
+                            readData.values().stream().findFirst().orElse("").isBlank()) {
+                        throw new ErroneousExtractedDataException(
+                                String.format("Die eingelesene Daten sind fehlerhaft. Datei:[%s] | Name[%s]:Datum[%s]",
+                                        fileAbsolutePath,
+                                        readData.keySet().stream().findFirst().orElse(""),
+                                        readData.values().stream().findFirst().orElse("")
+                                )
+                        );
+                    }
                 }
             });
         } catch (IOException e) {
@@ -93,7 +116,7 @@ public class PdfScanner {
     }
 
     private HashMap<String, String> extractFromFile(PDDocument document, Path file) throws IOException, ExtractDataException {
-        HashMap<String, String> readData;
+        HashMap<String, String> readData = null;
 
         if (!document.isEncrypted()) {
 

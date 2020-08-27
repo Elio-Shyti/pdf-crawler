@@ -228,6 +228,7 @@ public class FrameFactory {
                 }
 
                 ApplicationLogger.setOutputFile(outputPathTextField.getText());
+
                 String[] inputPathLines = inputPathTextArea.getText().split(Config.ls);
 
                 Map<String, String> pdfData = new HashMap<>();
