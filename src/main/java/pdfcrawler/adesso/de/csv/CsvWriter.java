@@ -2,15 +2,11 @@ package pdfcrawler.adesso.de.csv;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
-import pdfcrawler.adesso.de.ConfigService;
 import pdfcrawler.adesso.de.logging.LoggingService;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.text.Format;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -21,7 +17,6 @@ public class CsvWriter {
     final String[] headers = {"Name", "Datum"};
 
     public void createCsv(Map<String, String> data, File outputDirectory) throws IOException {
-        ConfigService configService = new ConfigService();
         Format formatter = new SimpleDateFormat("yyyy-MM-dd_hh-mm-ss");
         String dateTime = formatter.format(new Date());
 

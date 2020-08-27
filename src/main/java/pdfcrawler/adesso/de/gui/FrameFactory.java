@@ -7,6 +7,7 @@ import pdfcrawler.adesso.de.logging.ApplicationLogger;
 import pdfcrawler.adesso.de.logging.LoggingService;
 import pdfcrawler.adesso.de.utilities.Config;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.text.DefaultCaret;
 import java.awt.*;
@@ -23,11 +24,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 public class FrameFactory {
-    private static String SETTINGS_PROPERTIES = "settings.properties";
-    private static String DEFAULT_INPUTPATH = "default.inputPath";
-    private static String DEFAULT_OUTPUTPATH = "default.outputPath";
-    private static String INPUTPATH_CHECKBOX = "inputpath.checkbox";
-    private static String OUTPUTPATH_CHECKBOX = "outputpath.checkbox";
+    public static final String ICONS_BROWSE_PNG = "/icons/browse.png";
+    public static final String ICONS_EXECUTE_PNG = "/icons/execute.png";
     private static String BASE_DIR;
 
     static {
@@ -39,8 +37,8 @@ public class FrameFactory {
 
     private static final PdfScanner pdfScanner = new PdfScanner();
 
-    private static JLabel fileInputPathLabel = new JLabel("Eingabe Verzeichnis(e) / Detei(en) auswählen:");
-    private static JLabel fileOutputPathLabel = new JLabel("Ausgabe Verzeichnis auswählen:");
+    private static JLabel fileInputPathLabel = new JLabel("Eingabe Verzeichnis(e) / Detei(en) ausw\u00e4hlen:");
+    private static JLabel fileOutputPathLabel = new JLabel("Ausgabe Verzeichnis ausw\u00e4hlen:");
 
     private static JFileChooser inputPathFileChooser = new JFileChooser();
     private static JFileChooser outputPathFileChooser = new JFileChooser();
@@ -54,12 +52,9 @@ public class FrameFactory {
 
     private static JScrollPane inputPathTextAreaScrollPane = new JScrollPane(inputPathTextArea);
 
-    private static JButton browseInputButton = new JButton("Auswählen");
-    private static JButton browseOutputButton = new JButton("Auswählen");
-    private static JButton convertButton = new JButton("Ausführen");
-
-    private static JCheckBox inputPathCheckbox = new JCheckBox("Speichere Eingabepfad");
-    private static JCheckBox outputPathCheckbox = new JCheckBox("Speichere Ausgabepfad");
+    private static JButton browseInputButton = new JButton("Ausw\u00e4hlen");
+    private static JButton browseOutputButton = new JButton("Ausw\u00e4hlen");
+    private static JButton submitButton = new JButton("Ausf\u00fchren");
 
     public static JFrame initializeFrame() {
         if (frame == null) {
@@ -78,7 +73,6 @@ public class FrameFactory {
         outputPathFileChooser.setPreferredSize(new Dimension(1000, 600));
         outputPathFileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
         outputPathFileChooser.setMultiSelectionEnabled(false);
-        setDefaults();
 
         logsAreaScroll.getHorizontalScrollBar().setPreferredSize(new Dimension(0, 0));
         logsArea.setAutoscrolls(true);
@@ -90,18 +84,24 @@ public class FrameFactory {
 
         browseInputButton.addActionListener(buttonsActionListener);
         browseOutputButton.addActionListener(buttonsActionListener);
-        convertButton.addActionListener(buttonsActionListener);
-        inputPathCheckbox.addActionListener(buttonsActionListener);
-        outputPathCheckbox.addActionListener(buttonsActionListener);
+        submitButton.addActionListener(buttonsActionListener);
+
+        try {
+            Image browseIcon = ImageIO.read(FrameFactory.class.getResource(ICONS_BROWSE_PNG));
+            browseInputButton.setIcon(new ImageIcon(browseIcon.getScaledInstance(30, 30, Image.SCALE_SMOOTH)));
+            browseOutputButton.setIcon(new ImageIcon(browseIcon.getScaledInstance(30, 30, Image.SCALE_SMOOTH)));
+
+            Image submitIcon = ImageIO.read(FrameFactory.class.getResource(ICONS_EXECUTE_PNG));
+            submitButton.setIcon(new ImageIcon(submitIcon.getScaledInstance(30, 30, Image.SCALE_SMOOTH)));
+        } catch (Exception e) {
+            LoggingService.addExceptionToLog(e);
+        }
+
 
         inputPathTextAreaScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
 
         // Edit Element display properties
         inputPathTextAreaScrollPane.getVerticalScrollBar().setPreferredSize(new Dimension(0, 0));
-
-        Panel defaultCheckboxPanel = new Panel();
-        defaultCheckboxPanel.add(inputPathCheckbox);
-        defaultCheckboxPanel.add(outputPathCheckbox);
 
         // Add input path label
         c.insets = new Insets(10, 10, 10, 10);
@@ -137,18 +137,12 @@ public class FrameFactory {
         c.gridy = 1;
         pane.add(browseOutputButton, c);
 
-        // Add defaults checkbox panel.
-        c.fill = GridBagConstraints.VERTICAL;
-        c.gridx = 0;
-        c.gridy = 3;
-        pane.add(defaultCheckboxPanel, c);
-
         // Add convert button
         c.fill = GridBagConstraints.HORIZONTAL;
         c.gridx = 1;
         c.gridy = 3;
         c.gridwidth = 3;
-        pane.add(convertButton, c);
+        pane.add(submitButton, c);
 
         // Add logs text area
         c.gridx = 0;
@@ -159,103 +153,18 @@ public class FrameFactory {
         frame.pack();
         frame.setResizable(false);
         Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
+        // Set Windows in the middle of the screen.
         frame.setLocation(dim.width/2-frame.getSize().width/2, dim.height/2-frame.getSize().height/2);
-        URL iconURL = FrameFactory.class.getResource("/favicon.png");
+        URL iconURL = FrameFactory.class.getResource("/icons/favicon.png");
         // iconURL is null when not found
         ImageIcon icon = new ImageIcon(iconURL);
         frame.setIconImage(icon.getImage());
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
+        // Set focus on startup
+        browseInputButton.requestFocusInWindow();
 
         return frame;
-    }
-
-    private static void setDefaults() {
-        Properties prop = getDefaultSettings();
-
-        if (prop != null) {
-            String inputpath = prop.getProperty(DEFAULT_INPUTPATH);
-            if (inputpath != null) {
-                inputPathTextArea.setText(inputpath.replace(",", Config.ls));
-            }
-            String outputpath = prop.getProperty(DEFAULT_OUTPUTPATH);
-            if (outputpath != null) {
-                outputPathTextField.setText(outputpath);
-            }
-
-            String inputPathCheckboxProp = prop.getProperty(INPUTPATH_CHECKBOX);
-            String outputPathCheckboxProp = prop.getProperty(OUTPUTPATH_CHECKBOX);
-
-            if (inputPathCheckboxProp != null) {
-                inputPathCheckbox.setSelected(inputPathCheckboxProp.equals("true"));
-            }
-            if (outputPathCheckboxProp != null) {
-                outputPathCheckbox.setSelected(outputPathCheckboxProp.equals("true"));
-            }
-        }
-    }
-
-    /**
-     * Save the default input and output paths to the settings file.
-     * @param key
-     * @param value
-     */
-    private static void editSettingsToFile(String key, String value) {
-        if (key == null) {
-            return;
-        }
-
-        try {
-            String settingsFilePath = BASE_DIR + SETTINGS_PROPERTIES;
-            File settingsFile = new File(settingsFilePath);
-
-            if (!settingsFile.exists()) {
-                settingsFile.createNewFile();
-            }
-
-            OutputStream output = null;
-
-            try (InputStream inputStream = new FileInputStream(settingsFile)) {
-                Properties prop = new Properties();
-                prop.load(inputStream);
-
-                output = new FileOutputStream(settingsFile);
-
-                if (value != null) {
-                    prop.setProperty(key, value);
-                } else {
-                    prop.remove(key);
-                }
-
-                prop.store(output, null);
-            } finally {
-                if (output != null) {
-                    output.close();
-                }
-            }
-
-        } catch (IOException e) {
-            LoggingService.log("Es ist ein Fehler beim Anlegen der Setting." + e.getMessage());
-        }
-    }
-
-    private static Properties getDefaultSettings() {
-        String settingsFilePath = BASE_DIR + SETTINGS_PROPERTIES;
-
-        try(InputStream inputStream = new FileInputStream(settingsFilePath)) {
-            Properties properties = new Properties();
-
-            if (inputStream != null) {
-                properties.load(inputStream);
-                return properties;
-            } else {
-                LoggingService.log("Es ist ein Fehler beim Settings-Einlesen passiert. InnputStream ist null.");
-                return null;
-            }
-        } catch (IOException e) {
-            LoggingService.log("Es ist ein Fehler beim Settings-Einlesen passiert: " + e.getMessage());
-            return null;
-        }
     }
 
     static class ButtonsActionListener implements ActionListener {
@@ -280,10 +189,14 @@ public class FrameFactory {
                             inputPathTextArea.append(path.getAbsolutePath() + Config.ls);
                         }
                     });
+                }
 
-                    if (inputPathCheckbox.isSelected()) {
-                        editSettingsToFile(DEFAULT_INPUTPATH, inputPathTextArea.getText());
-                    }
+                if (inputPathTextArea.getText().isBlank()) {
+                    browseInputButton.requestFocus();
+                } else if (outputPathTextField.getText().isBlank()) {
+                    browseOutputButton.requestFocus();
+                } else {
+                    submitButton.requestFocus();
                 }
                 // Browse output file
             } else if (actionEvent.getSource() == browseOutputButton) {
@@ -292,15 +205,18 @@ public class FrameFactory {
                 if (returnVal == JFileChooser.APPROVE_OPTION) {
                     outputPathTextField.setText(outputPathFileChooser.getSelectedFile().getAbsolutePath());
                     ApplicationLogger.setOutputFile(outputPathTextField.getText());
-
-                    if (outputPathCheckbox.isSelected()) {
-                        editSettingsToFile(DEFAULT_OUTPUTPATH, outputPathTextField.getText());
-                    }
                 } else {
-                    LoggingService.log("Fehler beim Auswählen des Ausgabepfad.");
+                    LoggingService.log("Fehler beim Ausw\u00e4hlen des Ausgabepfad.");
                 }
-                // Press convert button
-            } else if (actionEvent.getSource() == convertButton) {
+
+                if (outputPathTextField.getText().isBlank()) {
+                    browseOutputButton.requestFocus();
+                } else if (inputPathTextArea.getText().isBlank()) {
+                    browseInputButton.requestFocus();
+                } else {
+                    submitButton.requestFocus();
+                }
+            } else if (actionEvent.getSource() == submitButton) {
                 if (inputPathTextArea.getText().isBlank()) {
                     LoggingService.log("Konvertierung kann nicht stattfinden. Eingabedateipfad ist nicht definiert.");
                     JOptionPane.showMessageDialog(frame, "Bitte Eingabefeld definieren.");
@@ -317,7 +233,7 @@ public class FrameFactory {
                 Map<String, String> pdfData = new HashMap<>();
 
                 // Log all selected paths.
-                LoggingService.logApplicationLogs("Diese Pfade wurden zum Bearbeiten ausgewählt: ");
+                LoggingService.logApplicationLogs("Diese Pfade wurden zum Bearbeiten ausgew\u00e4hlt: ");
                 Arrays.stream(inputPathLines).forEach(inputPath -> {
                     ApplicationLogger.noFormattingLog(String.format("\t%s\n", inputPath));
                 });
@@ -325,7 +241,7 @@ public class FrameFactory {
                 ExecutorService executorService = Executors.newFixedThreadPool(2);
                 Runnable processPDFsTask = () -> {
                     CSVErrorStatus.resetCounters();
-                    convertButton.setEnabled(false);
+                    submitButton.setEnabled(false);
                     for (String inputPath : inputPathLines) {
                         pdfData.putAll(pdfScanner.scanFile(inputPath));
                     }
@@ -343,17 +259,13 @@ public class FrameFactory {
                         File outputFile = new File(outputPathTextField.getText());
                         outputFile.mkdir();
                         new CsvWriter().createCsv(pdfData, outputFile);
-                        editSettingsToFile(DEFAULT_INPUTPATH, inputPathTextArea.getText());
-                        editSettingsToFile(DEFAULT_OUTPUTPATH, outputPathTextField.getText());
-                        editSettingsToFile(INPUTPATH_CHECKBOX, inputPathCheckbox.isSelected() ? "true" : "false");
-                        editSettingsToFile(OUTPUTPATH_CHECKBOX, outputPathCheckbox.isSelected() ? "true" : "false");
                     } catch (IOException e) {
                         // TODO: Display a GUI error message.
                         LoggingService.log("Fehler beim Erstellen von CSV:");
                         LoggingService.log(e.getMessage());
                     }
                     finally {
-                        convertButton.setEnabled(true);
+                        submitButton.setEnabled(true);
                         logStatistics();
                         LoggingService.log("VERARBEITUNG WURDE BEENDET");
                         ApplicationLogger.noFormattingLog("\n###VERARBEITUNG WURDE BEENDET###\n");
@@ -365,22 +277,6 @@ public class FrameFactory {
                     }
                 };
                 executorService.execute(writeToCSVTask);
-            } else if (actionEvent.getSource() == inputPathCheckbox) {
-                if (inputPathCheckbox.isSelected()) {
-                    editSettingsToFile(DEFAULT_INPUTPATH, inputPathTextArea.getText());
-                    editSettingsToFile(INPUTPATH_CHECKBOX, "true");
-                } else {
-                    editSettingsToFile(DEFAULT_INPUTPATH, null);
-                    editSettingsToFile(INPUTPATH_CHECKBOX, "false");
-                }
-            } else if (actionEvent.getSource() == outputPathCheckbox) {
-                if (outputPathCheckbox.isSelected()) {
-                    editSettingsToFile(DEFAULT_OUTPUTPATH, outputPathTextField.getText());
-                    editSettingsToFile(OUTPUTPATH_CHECKBOX, "true");
-                } else {
-                    editSettingsToFile(DEFAULT_OUTPUTPATH, null);
-                    editSettingsToFile(OUTPUTPATH_CHECKBOX, "false");
-                }
             }
         }
 

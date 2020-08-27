@@ -3,14 +3,10 @@ package pdfcrawler.adesso.de;
 import pdfcrawler.adesso.de.gui.FrameFactory;
 
 import javax.swing.*;
-import java.io.File;
-import java.io.IOException;
-import java.util.HashMap;
 import java.util.Scanner;
 
 
 public class Controller {
-    private static final ConfigService configService = new ConfigService();
     private static final Scanner sn = new Scanner(System.in);
 
     public static void main(String[] args) {
@@ -53,9 +49,5 @@ public class Controller {
     private static String getPathFromUserInput() {
         System.out.print("Ordner zu den PDF-Dateien: ");
         return sn.next();
-    }
-
-    private static void showSplash() {
-        System.out.println(configService.getSlashPic());
     }
 }
