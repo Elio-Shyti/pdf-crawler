@@ -1,6 +1,8 @@
 package pdfcrawler.adesso.de.csv;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 public class CSVErrorStatus {
@@ -13,6 +15,8 @@ public class CSVErrorStatus {
     public static Set<String> documentsWithoutErrors = new HashSet<>();
     // Documents that will not be read at all.
     public static Set<String> notReadDocuments = new HashSet<>();
+    // Duplicate data
+    public static Map<String, Integer> duplicateData = new HashMap<>();
 
     public static void addReadSuccess(String documentName) {
         readDocuments.add(documentName);
@@ -31,4 +35,9 @@ public class CSVErrorStatus {
         documentsWithErrors = new HashSet<>();
         documentsWithoutErrors = new HashSet<>();
     }
+
+    public static void addDuplicateData(String name) {
+        duplicateData.merge(name, 1, Integer::sum);
+    }
+
 }

@@ -9,17 +9,15 @@ import java.time.format.DateTimeFormatter;
 
 public class ApplicationLogger {
 
-    private static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-    private static final DateTimeFormatter appLogFormater = DateTimeFormatter.ofPattern("yyyy-MM-dd HH-mm-ss");
+    private static final DateTimeFormatter appLogFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH-mm-ss");
     private static String logFilename = "applogs.log";
     static {
-        logFilename=getCurrentTime(appLogFormater)+logFilename;
+        logFilename = getCurrentTime(appLogFormatter) + logFilename;
     }
     private static String outputFile;
     private static PrintWriter writer;
 
     public static void log(String msg) {
-        noFormattingLog(getCurrentTime(dateTimeFormatter));
         noFormattingLog(msg + Config.ls);
     }
 

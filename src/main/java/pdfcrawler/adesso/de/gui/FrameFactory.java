@@ -24,8 +24,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 public class FrameFactory {
-    public static final String ICONS_BROWSE_PNG = "/icons/browse.png";
-    public static final String ICONS_EXECUTE_PNG = "/icons/execute.png";
+
+    private static Map<String, String> pdfData = new LinkedHashMap<>();
+
+    private static final String ICONS_BROWSE_PNG = "/icons/browse.png";
+    private static final String ICONS_EXECUTE_PNG = "/icons/execute.png";
     private static String BASE_DIR;
 
     static {
@@ -47,7 +50,7 @@ public class FrameFactory {
     private static JTextArea inputPathTextArea = new JTextArea(5, TEXTFIELD_WIDTH);
     private static JTextField outputPathTextField = new JTextField(TEXTFIELD_WIDTH);
 
-    private static JTextArea logsArea = new JTextArea(10, 50);
+    private static JTextArea logsArea = new JTextArea(15, 50);
     private static JScrollPane logsAreaScroll = new JScrollPane(logsArea);
 
     private static JScrollPane inputPathTextAreaScrollPane = new JScrollPane(inputPathTextArea);
@@ -77,7 +80,7 @@ public class FrameFactory {
         logsAreaScroll.getHorizontalScrollBar().setPreferredSize(new Dimension(0, 0));
         logsArea.setAutoscrolls(true);
         logsArea.setEditable(false);
-        logsAreaScroll.setPreferredSize(new Dimension(600, 250));
+        logsAreaScroll.setPreferredSize(new Dimension(800, 350));
         ( (DefaultCaret) logsArea.getCaret()).setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
 
         ButtonsActionListener buttonsActionListener = new ButtonsActionListener();
@@ -231,7 +234,7 @@ public class FrameFactory {
 
                 String[] inputPathLines = inputPathTextArea.getText().split(Config.ls);
 
-                Map<String, String> pdfData = new HashMap<>();
+                pdfData = new LinkedHashMap<>();
 
                 // Log all selected paths.
                 LoggingService.logApplicationLogs("Diese Pfade wurden zum Bearbeiten ausgew\u00e4hlt: ");
@@ -244,7 +247,7 @@ public class FrameFactory {
                     CSVErrorStatus.resetCounters();
                     submitButton.setEnabled(false);
                     for (String inputPath : inputPathLines) {
-                        pdfData.putAll(pdfScanner.scanFile(inputPath));
+                        pdfScanner.scanFile(inputPath, pdfData);
                     }
                 };
                 Future<?> processPDFsTaskFuture = executorService.submit(processPDFsTask);
@@ -268,8 +271,12 @@ public class FrameFactory {
                     finally {
                         submitButton.setEnabled(true);
                         logStatistics();
-                        LoggingService.log("VERARBEITUNG WURDE BEENDET");
+                        if (CSVErrorStatus.duplicateData.size() > 0) {
+                            ApplicationLogger.noFormattingLog("ACHTUNG: Zum gleichen Namen gibt es nur einen Eintrag im CSV.");
+                        }
                         ApplicationLogger.noFormattingLog("\n###VERARBEITUNG WURDE BEENDET###\n");
+                        LoggingService.log("VERARBEITUNG WURDE BEENDET");
+
                         JOptionPane.showMessageDialog(frame,
                                 String.format("Verarbeitung wurde %s beendet.",
                                         CSVErrorStatus.documentsWithErrors.isEmpty() ? "fehlerfrei" : "mit Fehlern"),
@@ -282,12 +289,15 @@ public class FrameFactory {
         }
 
         private void logStatistics() {
-            logProcesedFiles(String.format("Gufunden (%d):", CSVErrorStatus.selectedDocuments.size()), CSVErrorStatus.selectedDocuments);
+            logProcesedFiles(String.format("Gefunden (%d):", CSVErrorStatus.selectedDocuments.size()), CSVErrorStatus.selectedDocuments);
             logProcesedFiles(String.format("Ignoriert (%d):", CSVErrorStatus.notReadDocuments.size()), CSVErrorStatus.notReadDocuments);
             logProcesedFiles(String.format("Eingelesen (%d):", CSVErrorStatus.readDocuments.size()), CSVErrorStatus.readDocuments);
             logProcesedFiles(String.format("Fehlerfrei (%d):", CSVErrorStatus.documentsWithoutErrors.size()), CSVErrorStatus.documentsWithoutErrors);
-            logProcesedFiles(String.format("Fehlerhaft (%d):", CSVErrorStatus.documentsWithErrors.size()
-            ), CSVErrorStatus.documentsWithErrors);
+            logProcesedFiles(String.format("Fehlerhaft (%d):", CSVErrorStatus.documentsWithErrors.size()), CSVErrorStatus.documentsWithErrors);
+            ApplicationLogger.log(String.format("Mehrmals (%d):", CSVErrorStatus.duplicateData.size()));
+            CSVErrorStatus.duplicateData.forEach((key, value) -> {
+                ApplicationLogger.noFormattingLog(String.format("\t\tName:[%s]\t[%d] mal\n", key, value));
+            });
             logCounters();
         }
 
@@ -301,20 +311,23 @@ public class FrameFactory {
         private void logCounters() {
 
             ApplicationLogger.log(String.format("Statistiken:"));
-            ApplicationLogger.noFormattingLog(String.format("\tEingegeben:\t\t%s\n" +
+            ApplicationLogger.noFormattingLog(String.format("\tIdentifiziert:\t\t\t%d\n" +
                             "\t===\n" +
-                            "\tNich eingelesen:\t%d\n" +
+                            "\tNicht eingelesen:\t\t%d\n" +
                             "\t===\n" +
-                            "\tEingelesen:\t\t%d\n" +
+                            "\tEingelesen:\t\t\t%d\n" +
                             "\t===\n" +
-                            "\tOhne Fehler:\t\t%d\n" +
+                            "\tOhne Fehler:\t\t\t%d\n" +
                             "\t===\n" +
-                            "\tMit Fehlern:\t\t%d\n",
+                            "\tMit Fehlern:\t\t\t%d\n" +
+                            "\t===\n" +
+                            "\tMehrmals gefundene Namen:\t%d\n",
                     CSVErrorStatus.selectedDocuments.size(),
                     CSVErrorStatus.notReadDocuments.size(),
                     CSVErrorStatus.readDocuments.size(),
                     CSVErrorStatus.documentsWithoutErrors.size(),
-                    CSVErrorStatus.documentsWithErrors.size())
+                    CSVErrorStatus.documentsWithErrors.size(),
+                    CSVErrorStatus.duplicateData.size())
             );
         }
     }
